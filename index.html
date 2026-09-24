@@ -3,39 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inscripciones</title>
-    <!-- Esto crea la variable global 'supabase' -->
+    <title>Inscripción al Torneo</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f9f9f9; }
+        .formulario { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
+        select, button { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; }
+        button { background: #007bff; color: white; border: none; margin-top: 20px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        #info-puntos { color: #555; font-size: 14px; margin-top: 5px; font-style: italic; }
+    </style>
 </head>
-<body style="font-family: Arial, sans-serif; padding: 20px;">
-    <h2>Conexión Vercel - Supabase</h2>
-    <div id="lista-jugadores">Cargando...</div>
+<body>
+    <div class="formulario">
+        <h2>Inscripción al Torneo</h2>
+        
+        <label for="select-jugador">1. Selecciona tu nombre:</label>
+        <select id="select-jugador" onchange="evaluarCategorias()">
+            <option value="">Cargando jugadores...</option>
+        </select>
+        <div id="info-puntos"></div>
+
+        <label for="select-categoria">2. Categorías permitidas para tu nivel:</label>
+        <select id="select-categoria" disabled>
+            <option value="">Primero selecciona tu nombre</option>
+        </select>
+
+        <button id="btn-inscribir" disabled onclick="inscribirJugador()">Reservar mi lugar (Pendiente de Pago)</button>
+    </div>
 
     <script>
         const supabaseUrl = 'https://stytjtqshyupkyihurpd.supabase.co';
         const supabaseKey = 'sb_publishable_vwjEpT0qRQv_giJV-oqLaA_dkDDCcR-';
-        
-        // Le cambiamos el nombre a 'clienteSupabase' para que no choque
         const clienteSupabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        let jugadores = [];
+
+        // 1. Cargar jugadores al abrir la página
         async function cargarJugadores() {
-            // Usamos 'clienteSupabase' aquí también
             const { data, error } = await clienteSupabase.from('jugadores').select('*');
+            if (error) return;
             
-            if (error) {
-                document.getElementById('lista-jugadores').innerHTML = "Error de conexión RLS.";
-                return;
-            }
-            if (!data || data.length === 0) {
-                document.getElementById('lista-jugadores').innerHTML = "Conectado. Pero la tabla está bloqueada por RLS o está vacía.";
-                return;
-            }
+            jugadores = data;
+            const select = document.getElementById('select-jugador');
+            select.innerHTML = '<option value="">-- Elige tu nombre --</option>';
             
-            let html = "<ul>";
-            data.forEach(j => html += `<li>${j.nombre} - ${j.puntos_ranking} pts</li>`);
-            html += "</ul>";
-            document.getElementById('lista-jugadores').innerHTML = html;
+            jugadores.forEach(j => {
+                let opcion = document.createElement('option');
+                opcion.value = j.id; // Usamos el ID interno
+                opcion.textContent = j.nombre;
+                select.appendChild(opcion);
+            });
         }
+
+        // 2. Filtrar categorías según el ranking
+        function evaluarCategorias() {
+            const selectJugador = document.getElementById('select-jugador');
+            const selectCategoria = document.getElementById('select-categoria');
+            const infoPuntos = document.getElementById('info-puntos');
+            const btnInscribir = document.getElementById('btn-inscribir');
+            
+            const idSeleccionado = selectJugador.value;
+
+            if (!idSeleccionado) {
+                selectCategoria.innerHTML = '<option value="">Primero selecciona tu nombre</option>';
+                selectCategoria.disabled = true;
+                btnInscribir.disabled = true;
+                infoPuntos.innerText = "";
+                return;
+            }
+
+            // Buscar los puntos del jugador seleccionado
+            const jugador = jugadores.find(j => j.id == idSeleccionado);
+            const pts = jugador.puntos_ranking;
+            infoPuntos.innerText = `Tienes ${pts} puntos de ranking.`;
+
+            // Lógica de rangos (Modifica estos números según tus reglas reales)
+            let htmlOpciones = '<option value="">-- Selecciona una categoría --</option>';
+            
+            // Si tiene 500 o menos, puede jugar 5ta y superiores
+            if (pts <= 500) htmlOpciones += '<option value="Quinta Fuerza">Quinta Fuerza</option>';
+            // Si tiene 1000 o menos, puede jugar 4ta y superiores
+            if (pts <= 1000) htmlOpciones += '<option value="Cuarta Fuerza">Cuarta Fuerza</option>';
+            // Si tiene 1500 o menos, puede jugar 3ra y superiores
+            if (pts <= 1500) htmlOpciones += '<option value="Tercera Fuerza">Tercera Fuerza</option>';
+            // Si tiene 2000 o menos, puede jugar 2da y superiores
+            if (pts <= 2000) htmlOpciones += '<option value="Segunda Fuerza">Segunda Fuerza</option>';
+            
+            // Primera fuerza y Libre siempre están abiertas para subir
+            htmlOpciones += '<option value="Primera Fuerza">Primera Fuerza</option>';
+            htmlOpciones += '<option value="Libre">Libre (Abierta)</option>';
+
+            selectCategoria.innerHTML = htmlOpciones;
+            selectCategoria.disabled = false;
+            
+            // Habilitar botón solo si elige categoría
+            selectCategoria.onchange = () => {
+                btnInscribir.disabled = selectCategoria.value === "";
+            };
+        }
+
+        // 3. Simular la inscripción (En el siguiente paso lo mandaremos a la nube)
+        function inscribirJugador() {
+            const jugador = document.getElementById('select-jugador').options[document.getElementById('select-jugador').selectedIndex].text;
+            const categoria = document.getElementById('select-categoria').value;
+            alert(`¡Lugar apartado para ${jugador} en ${categoria}!\n\nTienes 48 hrs para mandar tu comprobante de pago por WhatsApp para activar tu participación.`);
+        }
+
         cargarJugadores();
     </script>
 </body>
