@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscripciones - Halcones Table Tennis</title>
+    <!-- Conexión a Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto;">
+
+    <h2>Prueba de conexión a Base de Datos</h2>
+    <p>Lista de jugadores en tiempo real:</p>
+    
+    <div id="lista-jugadores" style="background: #f4f4f4; padding: 15px; border-radius: 8px;">Cargando datos...</div>
+
+    <script>
+        // 1. Configurar la conexión con tus datos
+        const supabaseUrl = 'https://stytjtqshyupkyihurpd.supabase.co';
+        const supabaseKey = 'sb_publishable_vwjEpT0qRQv_giJV-oqLaA_dkDDCcR-'; // Completa esta llave si le faltan letras
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // 2. Función para buscar los jugadores
+        async function cargarJugadores() {
+            const { data, error } = await supabase
+                .from('jugadores')
+                .select('*');
+
+            if (error) {
+                console.error("Error al cargar:", error);
+                document.getElementById('lista-jugadores').innerHTML = "<p style='color:red;'>Error de conexión. Revisa que tu llave pública esté completa.</p>";
+                return;
+            }
+
+            // 3. Mostrar los jugadores en pantalla
+            if (data.length === 0) {
+                document.getElementById('lista-jugadores').innerHTML = "<p>No hay jugadores en la base de datos.</p>";
+                return;
+            }
+
+            let html = "<ul style='list-style: none; padding: 0;'>";
+            data.forEach(jugador => {
+                html += `<li style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #ccc;">
+                            <strong>${jugador.nombre}</strong> <br> 
+                            Ranking: ${jugador.puntos_ranking} pts | Estatus: <em>${jugador.estatus_inscripcion}</em>
+                         </li>`;
+            });
+            html += "</ul>";
+
+            document.getElementById('lista-jugadores').innerHTML = html;
+        }
+
+        // Ejecutar al abrir la página
+        cargarJugadores();
+    </script>
+</body>
+</html>
